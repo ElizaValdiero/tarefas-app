@@ -1,0 +1,28 @@
+# Variáveis de ambiente
+.env
+
+# Docker
+postgres-data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Flutter
+flutter_app/.dart_tool/
+flutter_app/build/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+
+# VS Code
+.vscode/
+
+# Android
+*.keystore
+*.jks
+key.properties
+# Flutter extras
+flutter_app/.idea/
+flutter_app/.metadata
+flutter_app/*.iml
