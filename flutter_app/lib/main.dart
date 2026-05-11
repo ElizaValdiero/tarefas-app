@@ -18,12 +18,13 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Tarefas App',
-      // NOVO: tema claro
+      debugShowCheckedModeBanner: false,
+      //tema claro
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      // NOVO: tema escuro
+      //tema escuro
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
@@ -33,7 +34,6 @@ class _MyAppState extends State<MyApp> {
       ),
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
       home: TaskListScreen(
-        // NOVO: passa o tema e o botão de alternar
         isDark: isDark,
         onToggleTheme: () => setState(() => isDark = !isDark),
       ),
@@ -73,7 +73,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     await http.post(
       Uri.parse('http://localhost:8000/tasks'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'title': title, 'done': false}),
+      body: jsonEncode({'title': title, 'status': 'a_iniciar'}),
     );
     fetchTasks();
   }
@@ -83,18 +83,32 @@ class _TaskListScreenState extends State<TaskListScreen> {
     fetchTasks();
   }
 
+  Future<void> updateStatus(int id, String status) async {
+    final task = tasks.firstWhere((t) => t['id'] == id);
+    await http.put(
+      Uri.parse('http://localhost:8000/tasks/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'title': task['title'], 'status': status}),
+    );
+    fetchTasks();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // ALTERADO: título centralizado com emoji
-        title: Text('📝 Tarefas'),
+        title: Text(
+          'Tarefas 📝 ',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
-        // NOVO: botão de alternar tema
         actions: [
-          IconButton(
-            icon: Icon(widget.isDark ? Icons.light_mode : Icons.dark_mode),
-            onPressed: widget.onToggleTheme,
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: IconButton(
+              icon: Icon(widget.isDark ? Icons.light_mode : Icons.dark_mode),
+              onPressed: widget.onToggleTheme,
+            ),
           ),
         ],
       ),
@@ -118,19 +132,60 @@ class _TaskListScreenState extends State<TaskListScreen> {
               itemCount: tasks.length,
               itemBuilder: (context, index) {
                 final task = tasks[index];
-                // ALTERADO: ListTile dentro de Card com ícone
+
                 return Card(
                   margin: EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    leading: Icon(Icons.task_alt, color: Colors.deepPurple),
+                    leading: Icon(
+                      task['status'] == 'finalizada'
+                          ? Icons.check_circle
+                          : task['status'] == 'em_andamento'
+                          ? Icons.timelapse
+                          : Icons.radio_button_unchecked,
+                      color: task['status'] == 'finalizada'
+                          ? Colors.green
+                          : task['status'] == 'em_andamento'
+                          ? Colors.orange
+                          : Colors.blue,
+                    ),
                     title: Text(
                       task['title'],
                       style: TextStyle(fontWeight: FontWeight.w500),
                     ),
-                    trailing: IconButton(
-                      // ALTERADO: ícone de lixeira melhorado
-                      icon: Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () => deleteTask(task['id']),
+                    subtitle: Text(
+                      task['status'] == 'finalizada'
+                          ? '🟢 Finalizada'
+                          : task['status'] == 'em_andamento'
+                          ? '🟡 Em andamento'
+                          : '🔵 A iniciar',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PopupMenuButton<String>(
+                          icon: Icon(Icons.more_vert),
+                          onSelected: (status) =>
+                              updateStatus(task['id'], status),
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'a_iniciar',
+                              child: Text('🔵 A iniciar'),
+                            ),
+                            PopupMenuItem(
+                              value: 'em_andamento',
+                              child: Text('🟡 Em andamento'),
+                            ),
+                            PopupMenuItem(
+                              value: 'finalizada',
+                              child: Text('🟢 Finalizada'),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => deleteTask(task['id']),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -159,7 +214,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     onPressed: () => Navigator.pop(context),
                     child: Text('Cancelar'),
                   ),
-                  // ALTERADO: ElevatedButton em vez de TextButton
+
                   ElevatedButton(
                     onPressed: () {
                       if (controller.text.isNotEmpty) {

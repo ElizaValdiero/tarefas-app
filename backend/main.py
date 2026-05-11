@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    done = Column(Boolean, default=False)
+    status = Column(String, default="a_iniciar")
     
 Base.metadata.create_all(bind=engine)
 
@@ -30,7 +30,7 @@ app.add_middleware(
 
 class TaskSchema(BaseModel):
     title: str
-    done: bool = False
+    status: str = "a_iniciar"
     
 @app.get("/tasks")
 def get_tasks():
@@ -41,7 +41,7 @@ def get_tasks():
 @app.post("/tasks")
 def create_task(task: TaskSchema):
     db = SessionLocal()
-    new_task = Task(title=task.title, done=task.done)
+    new_task = Task(title=task.title, status=task.status)
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
@@ -54,7 +54,7 @@ def update_task(task_id: int, task: TaskSchema):
     if not db_task:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     db_task.title = task.title
-    db_task.done = task.done
+    db_task.status = task.status
     db.commit()
     db.refresh(db_task)
     db.close()
